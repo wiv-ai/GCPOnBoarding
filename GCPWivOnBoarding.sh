@@ -5,6 +5,9 @@ gcloud_login() {
   gcloud auth login
 }
 
+# Set to disable all interactive prompts
+gcloud config set disable_prompts true
+
 # Function to check if a command executed successfully
 check_error() {
   local exit_code="$1"
@@ -23,7 +26,7 @@ enable_service_api() {
 
   # Check if the API is enabled, and enable it if not
   if ! gcloud services list --project="$project_id" | grep -q "$api_name"; then
-    gcloud services enable "$api_name" --project="$project_id"
+    gcloud services enable "$api_name" --project="$project_id" --quiet
     check_error $? "Failed to enable $api_name on project $project_id."
   else
     echo "$api_name is already enabled on project $project_id."
@@ -36,7 +39,7 @@ create_service_account() {
   local display_name="$2"
   local project_id="$3"
 
-  gcloud iam service-accounts create "$service_account_name" --project="$project_id" --display-name="$display_name"
+  gcloud iam service-accounts create "$service_account_name" --project="$project_id" --display-name="$display_name" --quiet
   check_error $? "Failed to create service account $service_account_name in project $project_id."
 }
 
@@ -48,9 +51,9 @@ add_iam_binding() {
   local level="$4"
 
   if [ "$level" == "organization" ]; then
-    gcloud organizations add-iam-policy-binding "$target" --member="$member" --role="$role"
+    gcloud organizations add-iam-policy-binding "$target" --member="$member" --role="$role" --quiet
   elif [ "$level" == "project" ]; then
-    gcloud projects add-iam-policy-binding "$target" --member="$member" --role="$role"
+    gcloud projects add-iam-policy-binding "$target" --member="$member" --role="$role" --quiet
   fi
 
   check_error $? "Failed to add IAM policy binding for $member with role $role at $level level $target."
@@ -61,7 +64,7 @@ generate_service_account_key() {
   local service_account_email="$1"
   local key_file="$2"
 
-  gcloud iam service-accounts keys create "$key_file" --iam-account="$service_account_email"
+  gcloud iam service-accounts keys create "$key_file" --iam-account="$service_account_email" --quiet
   check_error $? "Failed to generate service account key for $service_account_email."
 }
 
