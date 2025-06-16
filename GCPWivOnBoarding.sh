@@ -51,9 +51,9 @@ add_iam_binding() {
   local level="$4"
 
   if [ "$level" == "organization" ]; then
-    gcloud organizations add-iam-policy-binding "$target" --member="$member" --role="$role" --quiet
+    gcloud organizations add-iam-policy-binding "$target" --member="$member" --role="$role" --condition=None --quiet
   elif [ "$level" == "project" ]; then
-    gcloud projects add-iam-policy-binding "$target" --member="$member" --role="$role" --quiet
+    gcloud projects add-iam-policy-binding "$target" --member="$member" --role="$role" --condition=None --quiet
   fi
 
   check_error $? "Failed to add IAM policy binding for $member with role $role at $level level $target."
