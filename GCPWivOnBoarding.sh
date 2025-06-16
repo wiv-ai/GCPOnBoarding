@@ -127,8 +127,18 @@ enable_service_api "$PROJECT_ID" "compute.googleapis.com"
 # Create service account "wiv-sa" with display name "Wiv Service Account" in the specified project
 create_service_account "wiv-sa" "Wiv Service Account" "$PROJECT_ID"
 
+# Wait for the service account to be fully available
+SERVICE_ACCOUNT_EMAIL="wiv-sa@$PROJECT_ID.iam.gserviceaccount.com"
+for i in {1..10}; do
+  if gcloud iam service-accounts describe "$SERVICE_ACCOUNT_EMAIL" --project="$PROJECT_ID" &>/dev/null; then
+    break
+  fi
+  echo "Waiting for service account to be available..."
+  sleep 2
+done
+
 # Generate a service account key and export it to the current directory
-generate_service_account_key "wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "key.json"
+generate_service_account_key "$SERVICE_ACCOUNT_EMAIL" "key.json"
 
 # Add IAM policy bindings
 if [ "$ORG_LEVEL" == "organization" ]; then
