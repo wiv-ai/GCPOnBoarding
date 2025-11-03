@@ -154,7 +154,6 @@ add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceacco
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.jobUser" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/recommender.bigQueryCapacityCommitmentsViewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/container.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/storage.objectViewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.dataViewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudsql.viewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/run.viewer" "$ORG_LEVEL"
