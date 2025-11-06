@@ -120,6 +120,7 @@ echo "Enter the project ID to create the service account wiv-sa (usually project
 read PROJECT_ID
 
 # Enable necessary APIs on the specified project
+enable_service_api "$PROJECT_ID" "iam.googleapis.com"
 enable_service_api "$PROJECT_ID" "recommender.googleapis.com"
 enable_service_api "$PROJECT_ID" "cloudresourcemanager.googleapis.com"
 enable_service_api "$PROJECT_ID" "compute.googleapis.com"
