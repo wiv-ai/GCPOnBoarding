@@ -197,10 +197,20 @@ APIS=(
 # Process each project
 SUCCESS_COUNT=0
 FAILED_COUNT=0
+SKIPPED_COUNT=0
 FAILED_PROJECTS=()
+SKIPPED_PROJECTS=()
 
 while IFS= read -r PROJECT_ID; do
   if [ -z "$PROJECT_ID" ]; then
+    continue
+  fi
+  
+  # Filter out system projects with sys- prefix
+  if [[ "$PROJECT_ID" =~ ^sys- ]]; then
+    echo "[DEBUG] Skipping system project: projectId=$PROJECT_ID, reason=system project excluded by sys- prefix rule"
+    SKIPPED_PROJECTS+=("$PROJECT_ID")
+    ((SKIPPED_COUNT++))
     continue
   fi
   
@@ -228,9 +238,19 @@ done <<< "$PROJECTS"
 
 # Summary
 echo "=== Summary ==="
-echo "Total projects processed: $PROJECT_COUNT"
+echo "Total projects discovered: $PROJECT_COUNT"
+echo "Skipped (sys- prefix): $SKIPPED_COUNT"
+echo "Processed: $((SUCCESS_COUNT + FAILED_COUNT))"
 echo "Successful: $SUCCESS_COUNT"
 echo "Failed: $FAILED_COUNT"
+
+if [ $SKIPPED_COUNT -gt 0 ]; then
+  echo ""
+  echo "Skipped projects (sys- prefix):"
+  for project in "${SKIPPED_PROJECTS[@]}"; do
+    echo "  - $project"
+  done
+fi
 
 if [ $FAILED_COUNT -gt 0 ]; then
   echo ""

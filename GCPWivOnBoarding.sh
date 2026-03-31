@@ -448,6 +448,8 @@ add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceacco
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/gkebackup.viewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudasset.viewer" "$ORG_LEVEL"
 add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.resourceViewer" "$ORG_LEVEL"
+add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/billing.viewer" "$ORG_LEVEL"
+
 
 echo "Service account key has been exported to the current directory."
 echo "IAM policy bindings added successfully at $ORG_LEVEL level ($TARGET_ID)."
