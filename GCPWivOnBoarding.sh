@@ -81,20 +81,125 @@ create_service_account() {
   check_error $? "Failed to create service account $service_account_name in project $project_id."
 }
 
-# Function to add IAM policy binding
-add_iam_binding() {
+# Roles granted to the Wiv service account at org or project level
+WIV_SA_ROLES=(
+  "roles/recommender.computeViewer"
+  "roles/recommender.viewer"
+  "roles/monitoring.viewer"
+  "roles/compute.viewer"
+  "roles/bigquery.jobUser"
+  "roles/recommender.bigQueryCapacityCommitmentsViewer"
+  "roles/container.viewer"
+  "roles/bigquery.dataViewer"
+  "roles/cloudsql.viewer"
+  "roles/run.viewer"
+  "roles/cloudfunctions.viewer"
+  "roles/pubsub.viewer"
+  "roles/spanner.viewer"
+  "roles/logging.viewer"
+  "roles/iam.securityReviewer"
+  "roles/compute.networkViewer"
+  "roles/cloudbuild.builds.viewer"
+  "roles/dataflow.viewer"
+  "roles/redis.viewer"
+  "roles/securitycenter.viewer"
+  "roles/cloudkms.viewer"
+  "roles/artifactregistry.reader"
+  "roles/gkebackup.viewer"
+  "roles/cloudasset.viewer"
+  "roles/bigquery.resourceViewer"
+  "roles/billing.viewer"
+)
+
+# Apply all IAM bindings in a single set-iam-policy call to avoid CRM write rate limits
+add_iam_bindings_batch() {
   local target="$1"
   local member="$2"
-  local role="$3"
-  local level="$4"
+  local level="$3"
+  shift 3
+  local roles=("$@")
 
-  if [ "$level" == "organization" ]; then
-    gcloud organizations add-iam-policy-binding "$target" --member="$member" --role="$role" --condition=None --quiet
-  elif [ "$level" == "project" ]; then
-    gcloud projects add-iam-policy-binding "$target" --member="$member" --role="$role" --condition=None --quiet
+  if ! command -v jq &>/dev/null; then
+    echo "Error: jq is required for batch IAM binding. Install jq and retry."
+    exit 1
   fi
 
-  check_error $? "Failed to add IAM policy binding for $member with role $role at $level level $target."
+  local policy_file updated_policy_file
+  policy_file=$(mktemp)
+  updated_policy_file=$(mktemp)
+
+  local max_attempts=5
+  local attempt=1
+  local wait_seconds=30
+
+  while [ "$attempt" -le "$max_attempts" ]; do
+    echo "Applying IAM policy bindings (${#roles[@]} roles, attempt $attempt/$max_attempts)..."
+
+    local get_output
+    if [ "$level" == "organization" ]; then
+      get_output=$(gcloud organizations get-iam-policy "$target" --format=json 2>&1)
+    else
+      get_output=$(gcloud projects get-iam-policy "$target" --format=json 2>&1)
+    fi
+
+    if [ $? -ne 0 ]; then
+      echo "$get_output"
+      rm -f "$policy_file" "$updated_policy_file"
+      exit 1
+    fi
+
+    echo "$get_output" > "$policy_file"
+    cp "$policy_file" "$updated_policy_file"
+
+    for role in "${roles[@]}"; do
+      jq --arg role "$role" --arg member "$member" '
+        .bindings = (
+          (.bindings // []) |
+          if map(.role) | index($role) then
+            map(if .role == $role then .members = ((.members // []) + [$member] | unique) else . end)
+          else
+            . + [{"role": $role, "members": [$member]}]
+          end
+        )
+      ' "$updated_policy_file" > "${updated_policy_file}.tmp" && mv "${updated_policy_file}.tmp" "$updated_policy_file"
+    done
+
+    local set_output
+    if [ "$level" == "organization" ]; then
+      set_output=$(gcloud organizations set-iam-policy "$target" "$updated_policy_file" --quiet 2>&1)
+    else
+      set_output=$(gcloud projects set-iam-policy "$target" "$updated_policy_file" --quiet 2>&1)
+    fi
+    local set_exit=$?
+
+    if [ $set_exit -eq 0 ]; then
+      echo "IAM policy bindings applied successfully."
+      rm -f "$policy_file" "$updated_policy_file"
+      return 0
+    fi
+
+    if echo "$set_output" | grep -qiE '429|RESOURCE_EXHAUSTED|RATE_LIMIT|rate limit|quota exceeded'; then
+      echo "Rate limit hit, waiting ${wait_seconds}s before retry..."
+      echo "$set_output"
+      sleep "$wait_seconds"
+      wait_seconds=$((wait_seconds * 2))
+      attempt=$((attempt + 1))
+    elif echo "$set_output" | grep -qiE '409|ABORTED|concurrent|etag'; then
+      echo "Policy conflict detected, re-fetching policy in 5s..."
+      echo "$set_output"
+      sleep 5
+      attempt=$((attempt + 1))
+    else
+      echo "Error: Failed to set IAM policy at $level level $target."
+      echo "$set_output"
+      rm -f "$policy_file" "$updated_policy_file"
+      exit 1
+    fi
+  done
+
+  echo "Error: Failed to set IAM policy after $max_attempts attempts."
+  rm -f "$policy_file" "$updated_policy_file"
+  exit 1
 }
 
 # Function to generate a service account key and export it
@@ -423,32 +528,8 @@ else
   TARGET_ID="$PROJECT_ID"
 fi
 
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/recommender.computeViewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/recommender.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/monitoring.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/compute.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.jobUser" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/recommender.bigQueryCapacityCommitmentsViewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/container.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.dataViewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudsql.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/run.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudfunctions.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/pubsub.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/spanner.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/logging.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/iam.securityReviewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/compute.networkViewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudbuild.builds.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/dataflow.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/redis.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/securitycenter.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudkms.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/artifactregistry.reader" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/gkebackup.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/cloudasset.viewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/bigquery.resourceViewer" "$ORG_LEVEL"
-add_iam_binding "$TARGET_ID" "serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com" "roles/billing.viewer" "$ORG_LEVEL"
+WIV_SA_MEMBER="serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com"
+add_iam_bindings_batch "$TARGET_ID" "$WIV_SA_MEMBER" "$ORG_LEVEL" "${WIV_SA_ROLES[@]}"
 
 
 echo "Service account key has been exported to the current directory."
