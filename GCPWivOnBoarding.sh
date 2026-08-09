@@ -437,8 +437,8 @@ select choice in "Standalone Project" "Entire Organization"; do
             break
           done
         else
-          ORGANIZATION_NAME=$(echo "$ORGANIZATIONS" | awk '{print $1}')
-          ORGANIZATION_ID=$(echo "$ORGANIZATIONS" | awk '{print $2}')
+          ORGANIZATION_ID=$(echo "$ORGANIZATIONS" | awk '{print $NF}')
+          ORGANIZATION_NAME=$(echo "$ORGANIZATIONS" | sed "s/[[:space:]]$ORGANIZATION_ID$//")
         fi
       fi
 
@@ -454,8 +454,22 @@ select choice in "Standalone Project" "Entire Organization"; do
   esac
 done
 
-# Prompt for project name with default
-DEFAULT_PROJECT_ID="wiv-gpc-project"
+# Build the default project ID from the organization name
+if [ "$ORG_LEVEL" = "organization" ]; then
+  ORGANIZATION_SLUG=$(printf '%s' "$ORGANIZATION_NAME" |
+    tr '[:upper:]' '[:lower:]' |
+    sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' |
+    cut -c1-22 |
+    sed 's/-$//')
+
+  if [ -z "$ORGANIZATION_SLUG" ]; then
+    ORGANIZATION_SLUG="org-${ORGANIZATION_ID##*/}"
+  fi
+
+  DEFAULT_PROJECT_ID="wiv-gcp-$ORGANIZATION_SLUG"
+else
+  DEFAULT_PROJECT_ID="wiv-gcp-project"
+fi
 echo ""
 echo "Enter the project ID for the Wiv service account project."
 echo "The script will create a new project if it doesn't exist."
