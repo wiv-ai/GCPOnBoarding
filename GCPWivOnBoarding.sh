@@ -538,12 +538,25 @@ generate_service_account_key "$SERVICE_ACCOUNT_EMAIL" "key.json"
 # Add IAM policy bindings
 if [ "$ORG_LEVEL" == "organization" ]; then
   TARGET_ID="$ORGANIZATION_ID"
+  ROLES_TO_APPLY=("${WIV_SA_ROLES[@]}")
 else
   TARGET_ID="$PROJECT_ID"
+  # Skip org-scoped roles that are not applicable (or commonly fail) on a standalone project
+  ROLES_TO_APPLY=()
+  for role in "${WIV_SA_ROLES[@]}"; do
+    case "$role" in
+      "roles/billing.viewer"|"roles/securitycenter.viewer")
+        echo "Skipping $role for standalone project (org-scoped / not applicable)."
+        ;;
+      *)
+        ROLES_TO_APPLY+=("$role")
+        ;;
+    esac
+  done
 fi
 
 WIV_SA_MEMBER="serviceAccount:wiv-sa@$PROJECT_ID.iam.gserviceaccount.com"
-add_iam_bindings_batch "$TARGET_ID" "$WIV_SA_MEMBER" "$ORG_LEVEL" "${WIV_SA_ROLES[@]}"
+add_iam_bindings_batch "$TARGET_ID" "$WIV_SA_MEMBER" "$ORG_LEVEL" "${ROLES_TO_APPLY[@]}"
 
 
 echo "Service account key has been exported to the current directory."
