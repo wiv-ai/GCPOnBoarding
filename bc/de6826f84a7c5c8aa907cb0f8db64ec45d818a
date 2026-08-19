@@ -1,0 +1,21 @@
+GCPWivOnBoarding.sh
+  s_fbc27abb8c50eb::t_af15a746c08423 512-517
+  s_fbc27abb8c50eb::t_f936c87bcba6b2 215,219-220,225-232,236-237,239-244
+  s_fbc27abb8c50eb::t_231f720f7a0288 460
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "bcde6826f84a7c5c8aa907cb0f8db64ec45d818a",
+  "prompts": {},
+  "sessions": {
+    "s_fbc27abb8c50eb": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "5bcd3af7-1cf1-44c2-a4aa-e6a181e13279",
+        "model": "grok-4.6"
+      },
+      "human_author": "Dotan Cohen <dotan@wiv.ai>"
+    }
+  }
+}
