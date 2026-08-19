@@ -212,19 +212,36 @@ generate_service_account_key() {
 }
 
 # Function to create a GCP project
+# Optional 3rd arg: organization ID so the project is created under the selected org
 create_project() {
   local project_id="$1"
   local project_name="$2"
+  local organization_id="${3:-}"
+  local numeric_org="${organization_id##*/}"
 
   # Check if project already exists
   if gcloud projects describe "$project_id" &>/dev/null; then
     echo "Project $project_id already exists. Using existing project."
+    if [ -n "$numeric_org" ]; then
+      local parent_id parent_type
+      parent_id=$(gcloud projects describe "$project_id" --format="value(parent.id)" 2>/dev/null)
+      parent_type=$(gcloud projects describe "$project_id" --format="value(parent.type)" 2>/dev/null)
+      if [ "$parent_type" = "organization" ] && [ "$parent_id" != "$numeric_org" ]; then
+        echo "Warning: Existing project $project_id is under organization $parent_id, not the selected organization $numeric_org."
+      fi
+    fi
     return 0
   fi
 
-  # Create the project
+  # Create the project under the selected organization when provided.
+  # Without --organization, disable_prompts makes gcloud pick a default (often the root org).
   echo "Creating project $project_id..."
-  gcloud projects create "$project_id" --name="$project_name" --quiet
+  if [ -n "$numeric_org" ]; then
+    echo "Creating project under organization $numeric_org..."
+    gcloud projects create "$project_id" --name="$project_name" --organization="$numeric_org" --quiet
+  else
+    gcloud projects create "$project_id" --name="$project_name" --quiet
+  fi
   check_error $? "Failed to create project $project_id."
   
   # Wait for project to be fully available
@@ -440,6 +457,7 @@ select choice in "Standalone Project" "Entire Organization"; do
           ORGANIZATION_ID=$(echo "$ORGANIZATIONS" | awk '{print $NF}')
           ORGANIZATION_NAME=$(echo "$ORGANIZATIONS" | sed "s/[[:space:]]$ORGANIZATION_ID$//")
         fi
+        echo "Selected organization: $ORGANIZATION_NAME ($ORGANIZATION_ID)"
       fi
 
       if [ -z "$ORGANIZATION_ID" ]; then
@@ -491,8 +509,12 @@ if ! [[ "$PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]; then
   exit 1
 fi
 
-# Create the project if it doesn't exist
-create_project "$PROJECT_ID" "Wiv GCP Project"
+# Create the project if it doesn't exist (under the selected org when onboarding an organization)
+if [ "$ORG_LEVEL" = "organization" ]; then
+  create_project "$PROJECT_ID" "Wiv GCP Project" "$ORGANIZATION_ID"
+else
+  create_project "$PROJECT_ID" "Wiv GCP Project"
+fi
 
 # Check if billing is enabled
 echo "Checking billing status for project $PROJECT_ID..."
