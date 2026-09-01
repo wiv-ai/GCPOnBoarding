@@ -30,7 +30,7 @@ After a successful provision, the **backend** finalizes the customer-tenant inte
 ```bash
 cd mini-site
 bun install
-cp .env.example .env.local   # set NEXT_PUBLIC_APP_SERVER_URL if needed
+cp env.example .env.local   # set NEXT_PUBLIC_APP_SERVER_URL if needed
 bun run dev                  # http://localhost:3000/gcp-onboard/<token>
 bun run test
 bun run typecheck
