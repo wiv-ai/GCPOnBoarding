@@ -88,3 +88,12 @@ These permissions are typically associated with roles such as `Project Owner`, `
 By following these steps and ensuring you have the required permissions, you can successfully run the script to set up the necessary Google Cloud resources and configurations.
 ```
 
+## MSP customer onboard mini-site
+
+The public customer wizard for GCP MSP keyless onboarding (WIV4-2) lives in [`mini-site/`](./mini-site).
+
+- Route: `/gcp-onboard/:token` (no Wiv login)
+- Calls app-server public token APIs only
+- Shell scripts in this repo root remain for Cloud Shell / manual key-based setup
+
+See [`mini-site/README.md`](./mini-site/README.md) for local run and API details.

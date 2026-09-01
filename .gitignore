@@ -1,0 +1,6 @@
+
+# Mini-site (Next.js)
+mini-site/node_modules/
+mini-site/.next/
+mini-site/.env*.local
+mini-site/out/

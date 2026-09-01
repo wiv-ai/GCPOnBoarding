@@ -1,0 +1,15 @@
+.page {
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  width: 100%; min-height: 100vh; padding: 40px 24px 48px;
+  background:
+    radial-gradient(circle at top left, rgba(247,168,193,0.22), transparent 42%),
+    linear-gradient(180deg, #f4f7ff 0%, #ffffff 48%, #fff7fb 100%);
+}
+.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.brandMark { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; color: #1b2b4b; }
+.brandSub { font-size: 13px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #7a849d; }
+.loading { display: grid; place-items: center; min-height: 220px; color: #5c6784; font-size: 14px; }
+@media (max-width: 720px) {
+  .page { padding: 28px 16px 40px; }
+  .brandMark { font-size: 28px; }
+}

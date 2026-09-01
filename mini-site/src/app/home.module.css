@@ -1,0 +1,29 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  color: #1b2b4b;
+  background:
+    radial-gradient(circle at top left, rgba(247, 168, 193, 0.22), transparent 42%),
+    linear-gradient(180deg, #f4f7ff 0%, #ffffff 50%, #fff7fb 100%);
+}
+.panel {
+  max-width: 480px;
+  text-align: center;
+}
+.title {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.body {
+  margin: 0;
+  color: #5c6784;
+  line-height: 1.5;
+}
+.code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.95em;
+}
