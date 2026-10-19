@@ -85,6 +85,43 @@ The user running this script must have the following permissions in Google Cloud
 
 These permissions are typically associated with roles such as `Project Owner`, `Organization Admin`, or custom roles that include the necessary permissions.
 
+## Domain Restricted Sharing (organization policy)
+
+This script grants roles only to `wiv-sa@<your-project>.iam.gserviceaccount.com`, a service account inside your own organization, so it is **not** affected by the `constraints/iam.allowedPolicyMemberDomains` organization policy.
+
+The in-app keyless wizard is different: it grants `roles/iam.serviceAccountTokenCreator` to Wiv's platform service account (`wiv-gcp-platform@wiv-prod-1.iam.gserviceaccount.com`), which lives in Wiv's organization. If Domain Restricted Sharing is enforced, that step fails with:
+
+```
+One or more users named in the policy do not belong to a permitted customer.
+User wiv-gcp-platform@wiv-prod-1.iam.gserviceaccount.com is not in permitted organization.
+```
+
+To allow it, an Organization Policy Administrator adds Wiv's organization principal set to the allowed values (scoped to the Wiv host project is enough):
+
+```
+principalSet://cloudresourcemanager.googleapis.com/organizations/809599052593
+```
+
+**Console:** IAM & Admin → Organization Policies → select the host project → **Domain restricted sharing** → **Manage policy** → **Override parent's policy** → **Add a rule** → **Custom** / **Allow** → add the value above alongside your own customer ID → **Set policy**.
+
+**gcloud:**
+
+```bash
+cat > wiv-domain-policy.yaml <<'EOF'
+name: projects/HOST_PROJECT_ID/policies/iam.allowedPolicyMemberDomains
+spec:
+  inheritFromParent: false
+  rules:
+    - values:
+        allowedValues:
+          - is:YOUR_CUSTOMER_ID
+          - is:principalSet://cloudresourcemanager.googleapis.com/organizations/809599052593
+EOF
+gcloud org-policies set-policy wiv-domain-policy.yaml
+```
+
+Full guide: [GCP Onboarding Process](https://docs.wiv.ai/onboarding/cloud-integrations/gcp/gcp-onboarding-process) in the Wiv docs. If you cannot change organization policy, use this script instead.
+
 By following these steps and ensuring you have the required permissions, you can successfully run the script to set up the necessary Google Cloud resources and configurations.
 ```
 
